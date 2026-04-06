@@ -78,7 +78,7 @@ from email import encoders
 SMTP_HOST = 'smtp.qq.com'
 SMTP_PORT = 465
 FROM_ADDR = '920325364@qq.com'
-FROM_PASS = 'qvrdkyrlophzbbfc'   # ← QQ邮箱授权码
+FROM_PASS = ''   # ← QQ邮箱授权码
 TO_ADDRS  = ['920325364@qq.com', 'danerli@tencent.com', 'lirunchh@gmail.com']
 
 def send(subject, body, attachment_paths=None):

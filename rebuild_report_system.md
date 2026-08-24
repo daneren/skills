@@ -1,474 +1,212 @@
-# AI 技术汇报体系一键重建文档（v5）
-
-> 最后更新：2026-04-06
-> 版本：v7（动态跟踪列表机制 · 时机由周报/月报驱动 · 每次修改自动同步本文档）
+# AI 技术汇报体系重建文档
+> 最后更新：2026-08-05
 
 ---
 
-## 🏗️ 架构原则
+## 一、体系概览
 
-```
-每个任务（topic）
-  └─ 独立生成 <topic>_YYYY-MM-DD.md，写入 daily_reports/
-  └─ 单独发一封邮件（正文+附件=自身.md）
-
-每日邮件汇总（09:30）
-  └─ glob *_TODAY.md 自动发现所有 topic
-  └─ 生成 daily_summary_TODAY.md
-  └─ 邮件正文 = 汇总内容，附件 = 所有子报告 + 汇总
-
-各周期汇总任务（周/月/季/半年/年/2年/3年）
-  └─ glob *_日期范围.md 自动发现所有 topic（按 topic 分类）
-  └─ 生成对应汇总 .md
-  └─ 邮件正文 = 汇总内容，附件 = 周期内所有子报告 + 汇总（去重）
-
-大模型专题汇总（半年/年/3年）
-  └─ 只读取 llm_progress_*.md 文件
-  └─ 按模型/机构分类整理
-  └─ 同上投递规范
-
-新增任务时
-  └─ 文件命名 <topic>_YYYY-MM-DD.md 写入 daily_reports/
-  └─ 所有通用汇总任务自动感知，无需修改
-```
+每日 06:00 起自动触发 8 个方向日报（每5分钟错峰），07:30 汇总推送，每周/月/季/年自动生成长周期汇总。
+所有任务均为 `sessionTarget=isolated`，投递到企业微信群 + 邮件（3个收件人）。
 
 ---
 
-## ⏰ 时间规范（固定，不可修改）
+## 二、每日日报任务（Asia/Shanghai，错峰触发）
 
-| 类型 | 触发时间 |
-|------|---------|
-| 所有日报任务 | **08:00** Asia/Shanghai |
-| 每日邮件汇总 | **09:30** Asia/Shanghai |
-| 周报 | 每周五 **08:00** |
-| 月报 | 月末最后工作日 **08:00** |
-| 季度报 | 季末最后工作日 **08:00** |
-| 半年报 | 半年末最后工作日 **08:00** |
-| 年度报 | 12月最后工作日 **08:00** |
-| 两年度报 | 偶数年12月最后工作日 **08:00** |
-| 三年度报 | 3的倍数年12月最后工作日 **08:00** |
+### 重试机制（所有日报任务统一）
+- 抓取失败（网络错误/超时/内容为空）→ 按 30s / 60s / 120s 递增等待后重试，最多3次
+- 3次均失败 → 跳过该来源，汇报中标注「⚠️ 数据获取失败，已跳过」，继续完成其余步骤
+- timeoutSeconds: 300s
 
 ---
 
-## 📋 重建前准备
+### 1. Megatron 每日技术进度汇报
+- **Job ID**: 8ed3fb1d-c108-4b23-b582-eed219a2d475
+- **触发时间**: 06:00
+- **输出文件**: `daily_reports/megatron_YYYY-MM-DD.md`
+- **数据来源**:
+  - github.com/NVIDIA/Megatron-LM (commits/releases/PRs)
+  - ArXiv: megatron
+- **汇报章节**: Release动态 / 代码变更 / PR进展 / 论文 / 新发现 / 总结
 
-### 1. 替换变量
+### 2. AI Infra 推理引擎每日技术进度汇报
+- **Job ID**: 6d11bfd9-2c1a-4b1a-ae23-1b7569ded8d6
+- **触发时间**: 06:05
+- **输出文件**: `daily_reports/ai_infra_inference_YYYY-MM-DD.md`
+- **数据来源**:
+  - github.com/vllm-project/vllm
+  - github.com/sgl-project/sglang
+  - github.com/NVIDIA/TensorRT-LLM
+  - ArXiv: LLM inference system
+- **汇报章节**: 推理引擎动态 / Release / PR / 论文 / 新发现 / 总结
 
-| 占位符 | 当前值 |
-|--------|--------|
-| `{GROUP_ID}` | `aibY2r-rXTKG9AJ1bKpoPbL69AcynSnoUvy` |
-| `{EMAIL_1}` | `920325364@qq.com` |
-| `{EMAIL_2}` | `danerli@tencent.com` |
-| `{EMAIL_3}` | `lirunchh@gmail.com` |
+### 3. AI Infra 训练基础设施每日技术进度汇报
+- **Job ID**: 54744f4f-c60a-40bd-9fdc-f8533b7b28a0
+- **触发时间**: 06:10
+- **输出文件**: `daily_reports/ai_infra_training_YYYY-MM-DD.md`
+- **数据来源**:
+  - github.com/Dao-AILab/flash-attention
+  - github.com/triton-lang/triton
+  - github.com/NVIDIA/nccl
+  - github.com/microsoft/DeepSpeed
+  - ArXiv: LLM training infrastructure / AI compiler GPU kernel
+- **汇报章节**: 训练基础设施动态 / Release / PR / 论文 / 新发现 / 总结
 
-### 2. 部署邮件脚本
+### 4. GitHub 热门项目每日汇报
+- **Job ID**: e3eb9a21-5b8b-4bab-b7e5-c8fcd14a0918
+- **触发时间**: 06:15
+- **输出文件**: `daily_reports/github_trending_YYYY-MM-DD.md`
+- **数据来源**:
+  - github.com/trending (今日/本周/本月)
+  - EdgeBrowser 搜索: github trending AI tools
+- **汇报章节**: 今日TOP10 / 本周持续热门 / AI相关热门 / 开发者工具 / 新发现 / 总结
 
-保存为 `/root/.openclaw/workspace/send_report_email.py`：
+### 5. 大模型国内每日技术汇报（DeepSeek/Qwen/Kimi/MiniMax）
+- **Job ID**: 83a60066-... （llm_cn）
+- **触发时间**: 06:20
+- **输出文件**: `daily_reports/llm_cn_YYYY-MM-DD.md`
+- **数据来源**:
+  - github.com/deepseek-ai / QwenLM / Kimi / MiniMax 相关仓库
+  - ArXiv: DeepSeek Qwen 国内大模型
+- **汇报章节**: 各模型动态 / 重点论文 / 新发现 / 总结
 
-```python
-#!/usr/bin/env python3
-"""用法: python3 send_report_email.py "主题" "正文" [附件路径1] [附件路径2] ..."""
-import smtplib, ssl, sys, os, mimetypes
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email.header import Header
-from email import encoders
+### 6. 大模型国际每日技术汇报（OpenAI/Claude/Gemini/Llama/Mistral）
+- **Job ID**: 72e8a3ff-... （llm_intl）
+- **触发时间**: 06:25
+- **输出文件**: `daily_reports/llm_intl_YYYY-MM-DD.md`
+- **数据来源**:
+  - openai.com/news / anthropic.com/news / Google DeepMind blog
+  - github.com/meta-llama / mistralai 相关仓库
+  - ArXiv: LLM reasoning scaling
+- **汇报章节**: 各模型动态 / 重点论文 / 新发现 / 总结
 
-SMTP_HOST = 'smtp.qq.com'
-SMTP_PORT = 465
-FROM_ADDR = '920325364@qq.com'
-FROM_PASS = ''   # ← QQ邮箱授权码
-TO_ADDRS  = ['920325364@qq.com', 'danerli@tencent.com', 'lirunchh@gmail.com']
+### 7. verl 每日技术进度汇报
+- **Job ID**: 62a1d2b7-88d4-40c4-a5c5-6c8c6b85e8d9
+- **触发时间**: 06:30
+- **输出文件**: `daily_reports/verl_YYYY-MM-DD.md`
+- **数据来源**:
+  - github.com/volcengine/verl (commits/releases/PRs/issues)
+  - ArXiv: verl reinforcement learning
+- **汇报章节**: Release / 代码变更 / PR / Issue / 论文 / 新发现 / 总结
+- **fallback 模型**: gongfeng/deepseek-v3-2
 
-def send(subject, body, attachment_paths=None):
-    msg = MIMEMultipart('mixed')
-    msg['Subject'] = Header(subject, 'utf-8')
-    msg['From'] = FROM_ADDR
-    msg['To'] = ', '.join(TO_ADDRS)
-    msg.attach(MIMEText(body, 'plain', 'utf-8'))
-    for fpath in (attachment_paths or []):
-        fpath = fpath.strip()
-        if not os.path.isfile(fpath): continue
-        filename = os.path.basename(fpath)
-        with open(fpath, 'rb') as f: data = f.read()
-        mime_type, _ = mimetypes.guess_type(fpath)
-        if mime_type is None: mime_type = 'application/octet-stream'
-        main_type, sub_type = mime_type.split('/', 1)
-        if main_type == 'text':
-            part = MIMEText(data.decode('utf-8', errors='replace'), sub_type, 'utf-8')
-        else:
-            part = MIMEBase(main_type, sub_type)
-            part.set_payload(data)
-            encoders.encode_base64(part)
-        encoded_name = Header(filename, 'utf-8').encode()
-        part['Content-Disposition'] = f'attachment; filename="{encoded_name}"'
-        part['Content-Type'] += f'; name="{encoded_name}"'
-        msg.attach(part)
-    ctx = ssl.create_default_context()
-    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ctx) as s:
-        s.login(FROM_ADDR, FROM_PASS)
-        s.sendmail(FROM_ADDR, TO_ADDRS, msg.as_string())
-    print(f'[OK] 邮件已发送: {subject}')
-
-if __name__ == '__main__':
-    if len(sys.argv) < 3: sys.exit('用法: send_report_email.py "主题" "正文" [附件...]')
-    send(sys.argv[1], sys.argv[2], sys.argv[3:])
-```
-
-### 3. 创建目录
-
-```bash
-mkdir -p /root/.openclaw/workspace/daily_reports
-```
-
-### 4. 文件命名规范
-
-| 文件 | 命名格式 |
-|------|---------|
-| 各 topic 日报 | `<topic>_YYYY-MM-DD.md` |
-| 每日汇总 | `daily_summary_YYYY-MM-DD.md` |
-| 周报 | `weekly_YYYY-WNN.md` |
-| 月报 | `monthly_YYYY-MM.md` |
-| 季度报 | `quarterly_YYYY-Qn.md` |
-| 半年报（通用） | `semiannual_YYYY-Hnn.md` |
-| 年度报（通用） | `annual_YYYY.md` |
-| 两年度报 | `biannual_YYYY.md` |
-| 三年度报（通用） | `triannual_YYYY.md` |
-| 大模型日报 | `llm_progress_YYYY-MM-DD.md` |
-| 大模型半年报 | `llm_semiannual_YYYY-Hnn.md` |
-| 大模型年报 | `llm_annual_YYYY.md` |
-| 大模型三年报 | `llm_triannual_YYYY.md` |
+### 8. Agentic RL + Agent-Lightning 每日技术进度汇报
+- **Job ID**: 3260f75a-2551-4e77-aff7-bf7c450da5da
+- **触发时间**: 06:35
+- **输出文件**: `daily_reports/agentic_rl_YYYY-MM-DD.md`
+- **数据来源**:
+  - ArXiv: agentic RL / RLVR / LLM agent RL training
+  - 核心仓库: OpenRLHF / TRL / verl / LLaMA-Factory / AREAL / ROLL / SLIME / DeepSpeedExamples
+  - Agent-Lightning: github.com/microsoft/agent-lightning
+  - HuggingFace blog / Microsoft Research blog
+- **汇报章节**: 论文 / 框架代码 / Agent-Lightning动态 / PR / 业界动态 / 新发现 / 总结
+- **fallback 模型**: gongfeng/deepseek-v3-2
 
 ---
 
-## 📋 任务创建指令（共 17 个）
+## 三、每日汇总任务（07:30 Asia/Shanghai）
 
-向新 OpenClaw 逐条发送即可重建全部任务。
-
----
-
-### ① Megatron 每日技术进度汇报
-- **Cron**: `0 8 * * *` | Asia/Shanghai | isolated
-
-```
-请创建 cron 任务（0 8 * * * Asia/Shanghai isolated delivery to={GROUP_ID}）：
-请抓取 Megatron 相关最新进展并生成今日汇报：
-1. https://github.com/NVIDIA/Megatron-LM/commits/main（近24h）
-2. https://github.com/NVIDIA/Megatron-LM/releases
-3. https://github.com/NVIDIA/Megatron-LM/pulls?state=open&sort=updated
-4. ArXiv: https://arxiv.org/search/?searchtype=all&query=megatron
-5. 【动态发现机制】发现新兴相关项目列出「🆕 新发现」
-6. 生成中文汇报：📦Release/🔧代码变更/🔀PR/📄论文/🆕新发现/📌总结
-
-投递：
-① 写入 daily_reports/megatron_$(date +%Y-%m-%d).md
-② --channel openclaw-wecom-bot --to {GROUP_ID}
-③ python3 .../send_report_email.py "【Megatron 日报】$(date +%Y-%m-%d)" \
-     "$(cat .../megatron_$(date +%Y-%m-%d).md)" \
-     .../megatron_$(date +%Y-%m-%d).md
-```
+### 每日技术汇报邮件汇总
+- **Job ID**: ca22acec-c8f8-41e8-9232-9ad3f556729a
+- **触发时间**: 07:30
+- **输出文件**: `daily_reports/daily_summary_YYYY-MM-DD.md`
+- **功能**: 自动收集当日所有 `*_YYYY-MM-DD.md` 文件，拼接为全方向汇总，发送企业微信群 + 邮件（含所有子报告附件）
+- **timeoutSeconds**: 300s
 
 ---
 
-### ② verl 每日技术进度汇报
-- **Cron**: `0 8 * * *` | Asia/Shanghai | isolated
+## 四、长周期汇总任务
+
+| 周期 | 任务名 | Job ID | 触发时间 | timeout |
+|------|--------|--------|----------|---------|
+| 周报 | 每周技术进展汇总 | 353c9169 | 每周五 06:00 | 900s |
+| 月报 | 每月技术进展汇总 | d4007f78 | 每月1日 06:00 | 900s |
+| 季报 | 季度技术进展汇总 | 0fd020ec | 每季1日 06:10 | 1200s |
+| 半年报 | 半年技术进展汇总 | 1c59672f | 1月1日、7月1日 06:20 | 1800s |
+| 年报 | 年度技术进展汇总 | c36fd94a | 每年1月1日 06:30 | 2400s |
+| 两年报 | 两年度技术进展汇总 | d24bbd6d | 每年1月1日 06:40 | 3000s |
+| 三年报 | 三年度技术进展汇总 | 750dcaa9 | 每年1月1日 06:50 | 3600s |
+
+> 注：长周期汇总自动聚合所有 topic 日报，不再单独设置大模型长周期任务。
+
+### 周报逻辑（2026-04-18 更新）
+- **有日报文件**：直接读取文件内容，提炼进周报，不重新抓取数据源
+- **无日报文件**：实时抓取该方向数据源，直接提炼进周报，**不单独生成日报文件**
+- 每方向标注来源：📄 来自日报 / 🌐 实时抓取
+
+---
+
+## 五、动态跟踪列表
+
+- 文件路径: `/root/.openclaw/workspace/tracking_list.json`
+- **周报触发**: 每周评估，新发现 ≥2次 → watchlist提升为active；连续4周无进展 → 降级watchlist
+- **月报触发**: 每月深度评估，watchlist连续2月无动态 → 移入removed；新发现 ≥3次 → 加入watchlist
+
+---
+
+## 六、邮件配置
+
+- **脚本路径**: `/root/.openclaw/workspace/send_report_email.py`
+- **发件人**: 920325364@qq.com（QQ邮箱 SMTP smtp.qq.com:465 SSL）
+- **收件人**:
+  - 920325364@qq.com
+  - danerli@tencent.com
+  - lirunchh@gmail.com
+
+---
+
+## 七、文件目录结构
 
 ```
-请创建 cron 任务（0 8 * * * Asia/Shanghai isolated delivery to={GROUP_ID}）：
-请抓取 verl 项目相关最新进展并生成今日汇报：
-1. https://github.com/volcengine/verl/commits/main（近24h）
-2. https://github.com/volcengine/verl/releases
-3. https://github.com/volcengine/verl/pulls?state=open&sort=updated
-4. https://github.com/volcengine/verl/issues?state=open&sort=updated
-5. ArXiv: verl+reinforcement+learning
-6. 【动态发现机制】发现新兴相关项目列出「🆕 新发现」
-7. 生成中文汇报：📦Release/🔧代码变更/🔀PR/🐛Issue/📄论文/🆕新发现/📌总结
-
-投递（同 Megatron，topic=verl）
+/root/.openclaw/workspace/
+├── daily_reports/
+│   ├── megatron_YYYY-MM-DD.md
+│   ├── ai_infra_inference_YYYY-MM-DD.md
+│   ├── ai_infra_training_YYYY-MM-DD.md
+│   ├── github_trending_YYYY-MM-DD.md
+│   ├── llm_cn_YYYY-MM-DD.md
+│   ├── llm_intl_YYYY-MM-DD.md
+│   ├── verl_YYYY-MM-DD.md
+│   ├── agentic_rl_YYYY-MM-DD.md
+│   ├── daily_summary_YYYY-MM-DD.md
+│   ├── weekly_YYYY-WXX.md
+│   ├── monthly_YYYY-MM.md
+│   ├── quarterly_YYYY-QX.md
+│   ├── semiannual_YYYY-HX.md
+│   ├── annual_YYYY.md
+│   ├── biannual_YYYY-YYYY.md
+│   └── triannual_YYYY-YYYY.md
+├── tracking_list.json
+├── send_report_email.py
+├── weekly_report_prompt.md   ← 周报 prompt 备份
+├── rebuild_report_system.md  ← 本文件
+└── skills/
+    └── tech-report-builder/
+        └── SKILL.md
 ```
 
 ---
 
-### ③ Agentic RL + Agent-Lightning 每日技术进度汇报
-- **Cron**: `0 8 * * *` | Asia/Shanghai | isolated
-- **合并说明**：Agent-Lightning 已并入本任务（原⑤已禁用）
+## 八、已禁用/废弃任务
 
-```
-请创建 cron 任务（0 8 * * * Asia/Shanghai isolated delivery to={GROUP_ID}）：
-
-【Agentic RL 部分】
-核心仓库：OpenRLHF/OpenRLHF, huggingface/trl, volcengine/verl,
-          AREAL-GT/AREAL, ROLL-LM/roll, SLIME-LM/slime,
-          hiyouga/LLaMA-Factory, microsoft/DeepSpeedExamples
-ArXiv：agentic RL / RLVR / LLM agent RL training
-博客：https://huggingface.co/blog
-
-【Agent-Lightning 部分】
-仓库：microsoft/agent-lightning（commits/PRs/issues/releases）+ microsoft/DeepSpeed
-ArXiv：agent lightning RL
-博客：https://www.microsoft.com/en-us/research/blog/
-
-【动态发现机制】发现新兴框架/仓库列出「🆕 新发现」
-生成中文汇报：
-  一、最新论文亮点（Agentic RL）
-  二、主要框架代码进展（ROLL/AREAL/SLIME/OpenRLHF/verl/TRL）
-  三、Agent-Lightning 动态（Release/代码变更/PR/Issue/研究博客）
-  四、值得关注的 PR/新特性 / 五、业界动态 / 六、新发现 / 七、总结
-
-投递（同 Megatron，topic=agentic_rl，文件名 agentic_rl_YYYY-MM-DD.md）
-```
+| Job ID | 原任务名 | 废弃原因 |
+|--------|----------|----------|
+| 005cd45e | AI Infra 训练推理（合并版） | token超限，已拆分为推理+训练两个独立任务 |
+| 27d36768 | 大模型算法进展（合并版） | token超限，已拆分为国内+国际两个独立任务 |
+| 8e3b40f7 | Agent-Lightning 单独任务 | 已并入 Agentic RL 任务 |
 
 ---
 
-### ④ AI Infra 训练推理每日技术进度汇报
-- **Cron**: `0 8 * * *` | Asia/Shanghai | isolated
+## 九、变更记录
 
-```
-请创建 cron 任务（0 8 * * * Asia/Shanghai isolated delivery to={GROUP_ID}）：
-推理引擎：vllm/sglang/TensorRT-LLM/FastChat（近24h commits）
-训练基础设施：flash-attention/triton/nccl/DeepSpeed/Megatron-LM
-ArXiv：LLM inference system / training infrastructure / AI compiler GPU kernel
-【动态发现机制】发现新兴项目列出「🆕 新发现」
-生成中文汇报：🚀推理引擎/🔧训练基础设施/📦Release/🔀PR/📄论文/🆕新发现/📌总结
-
-投递（同 Megatron，topic=ai_infra）
-```
-
----
-
-### ~~⑤ Agent-Lightning 每日技术进度汇报~~
-> ⚠️ **已禁用**：Agent-Lightning 内容已合并入③，此任务不再单独运行。
-
----
-
-### ⑥ 大模型算法进展每日技术汇报
-- **Cron**: `0 8 * * *` | Asia/Shanghai | isolated
-
-```
-请创建 cron 任务（0 8 * * * Asia/Shanghai isolated delivery to={GROUP_ID}）：
-收集各主流大模型最新动态（近24-48h）：
-🔴 OpenAI: openai.com/news + platform changelog + github openai-python
-🟠 DeepSeek: github deepseek-ai（V3/R1/Prover-V2）+ huggingface
-🟡 Qwen: github QwenLM（Qwen3/Qwen-Agent）+ huggingface + qwenlm.github.io/blog
-🟢 Kimi(Moonshot): platform.moonshot.cn/docs/changelog + github MoonshotAI
-🔵 MiniMax: github MiniMaxAI + huggingface MiniMaxAI
-🟣 Claude(Anthropic): anthropic.com/news + docs release-notes + github anthropic-sdk
-🔵 Gemini(Google): blog.google/technology/google-deepmind + ai.google.dev changelog
-⚫ Llama(Meta): github meta-llama（llama-models/llama-stack）+ huggingface meta-llama
-🟤 Mistral: mistral.ai/news + huggingface mistralai
-ArXiv：LLM alignment / LLM reasoning scaling / foundation model
-【动态发现机制】新兴模型列出「🆕 新发现模型/技术」
-
-生成中文汇报：🤖大模型算法进展日报 [YYYY-MM-DD]
-  一、各模型今日动态（按模型，数量不固定）
-  二、今日重点论文（若有）
-  三、新发现模型/技术（若有）
-  四、今日技术亮点总结
-
-投递：
-① 写入 daily_reports/llm_progress_$(date +%Y-%m-%d).md
-② --channel openclaw-wecom-bot --to {GROUP_ID}
-③ python3 .../send_report_email.py "【大模型日报】$(date +%Y-%m-%d)" \
-     "$(cat .../llm_progress_$(date +%Y-%m-%d).md)" \
-     .../llm_progress_$(date +%Y-%m-%d).md
-```
-
----
-
-### ⑦ 每日技术汇报邮件汇总（09:30）
-- **Cron**: `30 9 * * *` | Asia/Shanghai | isolated
-
-```
-请创建 cron 任务（30 9 * * * Asia/Shanghai isolated delivery to={GROUP_ID}）：
-1. glob daily_reports/*_$(date +%Y-%m-%d).md（自动发现所有 topic，跳过 daily_summary_*）
-2. 按 topic 拼接汇总，各 topic 用 ===== {topic} ===== 分隔，缺失标注「未生成」
-3. 写入 daily_reports/daily_summary_$(date +%Y-%m-%d).md
-4. --channel openclaw-wecom-bot --to {GROUP_ID} 发送摘要+共 N 个方向
-5. 发邮件：
-   SUMMARY_FILE=daily_reports/daily_summary_$(date +%Y-%m-%d).md
-   ATTACHMENTS=（所有 *_TODAY.md 排除 SUMMARY_FILE）
-   send_report_email.py "【每日技术汇报】DATE" "$(cat SUMMARY_FILE)" $ATTACHMENTS $SUMMARY_FILE
-```
-
----
-
-### ⑧ 每周技术进展汇总（周五 08:00）
-- **Cron**: `0 8 * * 5` | Asia/Shanghai | isolated
-
-```
-请创建 cron 任务（0 8 * * 5 Asia/Shanghai isolated delivery to={GROUP_ID}）：
-1. glob 过去7天 daily_reports/*_DATE.md（跳过 weekly_*），按 topic 分类整理
-2. 缺失方向从网络补充过去7天数据
-3. 生成周汇总：各方向进展/重点论文TOP5/新发现/趋势分析/下周预测
-4. 写入 daily_reports/weekly_$(date +%Y-W%V).md
-5. --channel openclaw-wecom-bot --to {GROUP_ID}
-6. 发邮件正文=周汇总，附件=本周所有子报告+周汇总（去重）
-```
-
----
-
-### ⑨ 每月技术进展汇总（月末最后工作日 08:00）
-- **Cron**: `0 8 L * 1-5` | Asia/Shanghai | isolated
-
-```
-请创建 cron 任务（0 8 L * 1-5 Asia/Shanghai isolated delivery to={GROUP_ID}）：
-1. glob 本月 daily_reports/*_$(date +%Y-%m)-*.md（跳过 monthly_*），按 topic 分类
-2. 缺失方向从网络补充本月数据
-3. 生成月汇总：各方向进展/重点论文TOP10/新发现/趋势分析/下月展望
-4. 写入 daily_reports/monthly_$(date +%Y-%m).md
-5. --channel openclaw-wecom-bot --to {GROUP_ID}
-6. 发邮件正文=月汇总，附件=本月所有子报告+月汇总（去重）
-```
-
----
-
-### ⑩ 季度技术进展汇总（每季度末最后工作日 08:00）
-- **Cron**: `0 8 L 3,6,9,12 1-5` | Asia/Shanghai | isolated
-
-```
-请创建 cron 任务（0 8 L 3,6,9,12 1-5 Asia/Shanghai isolated delivery to={GROUP_ID}）：
-1. glob 过去90天 daily_reports/*_DATE.md（跳过 quarterly_*），按 topic 分类
-2. 缺失方向从网络补充季度数据
-3. 生成季度汇总：各方向进展/重点论文TOP15/新兴项目盘点/趋势分析/下季度展望
-4. 写入 daily_reports/quarterly_$(date +%Y-Q%q).md
-5. --channel openclaw-wecom-bot --to {GROUP_ID}
-6. 发邮件正文=季度汇总，附件=季度所有子报告+季度汇总（去重）
-```
-
----
-
-### ⑪ 半年技术进展汇总（每半年末最后工作日 08:00）
-- **Cron**: `0 8 L 6,12 1-5` | Asia/Shanghai | isolated
-
-```
-同⑩，时间范围改为180天，文件名 semiannual_$(date +%Y-H%m).md，论文TOP20，含下半年展望
-```
-
----
-
-### ⑫ 年度技术进展汇总（12月最后工作日 08:00）
-- **Cron**: `0 8 L 12 1-5` | Asia/Shanghai | isolated
-
-```
-同⑩，时间范围改为365天，文件名 annual_$(date +%Y).md，论文TOP25，含年表+明年展望
-```
-
----
-
-### ⑬ 两年度技术进展汇总（偶数年12月最后工作日 08:00）
-- **Cron**: `0 8 L 12 1-5/2` | Asia/Shanghai | isolated
-
-```
-同⑩，时间范围改为730天，文件名 biannual_$(date +%Y).md，论文TOP30，含两年年表+未来两年展望
-```
-
----
-
-### ⑭ 三年度技术进展汇总（3的倍数年12月最后工作日 08:00）
-- **Cron**: `0 8 L 12 1-5/3` | Asia/Shanghai | isolated
-
-```
-同⑩，时间范围改为1095天，文件名 triannual_$(date +%Y).md，论文TOP40，含完整年表+未来三年展望
-```
-
----
-
-### ⑮ 大模型算法进展半年度汇总（每半年末最后工作日 08:00）
-- **Cron**: `0 8 L 6,12 1-5` | Asia/Shanghai | isolated
-
-```
-请创建 cron 任务（0 8 L 6,12 1-5 Asia/Shanghai isolated delivery to={GROUP_ID}）：
-1. 读取过去180天所有 daily_reports/llm_progress_*.md 文件
-2. 按模型/机构分类整理，缺失从网络补充
-3. 生成大模型半年度报：
-   各大模型半年重大进展 / 标志性模型发布 / 重点论文TOP20
-   新兴模型盘点 / 技术趋势深度分析（规模/推理/多模态/对齐/开源 vs 闭源/商业化）/ 下半年展望
-4. 写入 daily_reports/llm_semiannual_$(date +%Y-H%m).md
-5. --channel openclaw-wecom-bot --to {GROUP_ID}
-6. 发邮件正文=汇总，附件=所有 llm_progress_*.md + 汇总.md（去重）
-```
-
----
-
-### ⑯ 大模型算法进展年度汇总（12月最后工作日 08:00）
-- **Cron**: `0 8 L 12 1-5` | Asia/Shanghai | isolated
-
-```
-同⑮，时间范围改为365天，文件名 llm_annual_$(date +%Y).md，论文TOP25，含年表+明年展望
-```
-
----
-
-### ⑰ 大模型算法进展三年度汇总（3的倍数年12月最后工作日 08:00）
-- **Cron**: `0 8 L 12 1-5/3` | Asia/Shanghai | isolated
-
-```
-同⑮，时间范围改为1095天，文件名 llm_triannual_$(date +%Y).md，论文TOP40，含完整年表+未来三年展望+技术周期规律分析
-```
-
----
-
-## 📊 全部任务一览（18 个）
-
-| # | 任务名称 | Cron | 输出文件 | 邮件附件 |
-|---|---------|------|---------|---------|
-| ① | Megatron 日报 | `0 8 * * *` | `megatron_YYYY-MM-DD.md` | 自身 |
-| ② | verl 日报 | `0 8 * * *` | `verl_YYYY-MM-DD.md` | 自身 |
-| ③ | Agentic RL + Agent-Lightning 日报 | `0 8 * * *` | `agentic_rl_YYYY-MM-DD.md` | 自身 |
-| ④ | AI Infra 日报 | `0 8 * * *` | `ai_infra_YYYY-MM-DD.md` | 自身 |
-| ~~⑤~~ | ~~Agent-Lightning 日报~~ | ~~已禁用~~ | ~~并入③~~ | — |
-| ⑥ | 大模型算法进展日报 | `0 8 * * *` | `llm_progress_YYYY-MM-DD.md` | 自身 |
-| ⑦ | 每日邮件汇总 | `30 9 * * *` | `daily_summary_YYYY-MM-DD.md` | 今日所有子报告+汇总 |
-| ⑧ | 周报 | `0 8 * * 5` | `weekly_YYYY-WNN.md` | 本周子报告+汇总 |
-| ⑨ | 月报 | `0 8 L * 1-5` | `monthly_YYYY-MM.md` | 本月子报告+汇总 |
-| ⑩ | 季度报 | `0 8 L 3,6,9,12 1-5` | `quarterly_YYYY-Qn.md` | 季度子报告+汇总 |
-| ⑪ | 半年报 | `0 8 L 6,12 1-5` | `semiannual_YYYY-Hnn.md` | 半年子报告+汇总 |
-| ⑫ | 年度报 | `0 8 L 12 1-5` | `annual_YYYY.md` | 全年子报告+汇总 |
-| ⑬ | 两年度报 | `0 8 L 12 1-5/2` | `biannual_YYYY.md` | 两年子报告+汇总 |
-| ⑭ | 三年度报 | `0 8 L 12 1-5/3` | `triannual_YYYY.md` | 三年子报告+汇总 |
-| ⑮ | 大模型半年报 | `0 8 L 6,12 1-5` | `llm_semiannual_YYYY-Hnn.md` | llm_progress_*.md+汇总 |
-| ⑯ | 大模型年报 | `0 8 L 12 1-5` | `llm_annual_YYYY.md` | llm_progress_*.md+汇总 |
-| ⑰ | 大模型三年报 | `0 8 L 12 1-5/3` | `llm_triannual_YYYY.md` | llm_progress_*.md+汇总 |
-| ⑱ | GitHub 热门项目日报 | `0 8 * * *` | `github_trending_YYYY-MM-DD.md` | 自身 |
-
-**活跃任务：17 个**（⑤已禁用）
-
----
-
-## ➕ 新增任务说明
-
-1. 创建 cron 任务，在 `daily_reports/<新topic>_$(date +%Y-%m-%d).md` 写入报告
-2. 投递步骤与现有日报任务完全一致
-3. **无需修改任何汇总任务**——通用汇总（⑦~⑭）通过 `glob *_日期.md` 自动感知
-
----
-
-## 🔬 当前覆盖研究方向
-
-| topic 文件前缀 | 研究方向 | 核心来源 |
-|--------------|---------|---------|
-| `megatron_` | Megatron-LM | NVIDIA/Megatron-LM |
-| `verl_` | verl RL 框架 | volcengine/verl |
-| `agentic_rl_` | Agentic RL 训练 | ROLL/AREAL/SLIME/OpenRLHF/TRL |
-| `ai_infra_` | AI Infra 训练推理 | vLLM/SGLang/TRT-LLM/FlashAttention/Triton |
-| `agent_lightning_` | Agent-Lightning | microsoft/agent-lightning |
-| `llm_progress_` | 大模型算法进展 | OpenAI/DeepSeek/Qwen/Kimi/MiniMax/Claude/Gemini/Llama/Mistral |
-
----
-
-## 📧 收件邮箱
-
-- `920325364@qq.com`
-- `danerli@tencent.com`
-- `lirunchh@gmail.com`
-
----
-
-## 📁 关键路径
-
-| 路径 | 说明 |
-|------|------|
-| `/root/.openclaw/workspace/daily_reports/` | 所有报告文件 |
-| `/root/.openclaw/workspace/send_report_email.py` | 邮件脚本 |
-| `/root/.openclaw/workspace/rebuild_report_system.md` | 本文档 |
+| 日期 | 变更内容 |
+|------|----------|
+| 2026-03-05 | 初始搭建：Megatron / verl / Agentic RL / AI Infra / Agent-Lightning 5个日报 |
+| 2026-04-06 | 新增大模型日报、GitHub热门日报；新增周/月/季/半年/年/两年/三年汇总任务（共18个） |
+| 2026-04-06 | 创建 tech-report-builder Skill；发送重建文档至邮件组 |
+| 2026-04-07 | 删除大模型半年/年度/三年度独立任务（已被通用长周期汇总覆盖，任务数14个） |
+| 2026-04-07 | 全部日报任务新增重试机制（30s/60s/120s递增，最多3次） |
+| 2026-04-09 | AI Infra合并任务超时（194k tokens），拆分为推理引擎（6d11bfd9）+ 训练基础设施（54744f4f） |
+| 2026-04-09 | 大模型合并任务超时（216k tokens），拆分为国内（83a60066）+ 国际（72e8a3ff） |
+| 2026-04-13 | verl/Agentic RL 08:00并发过载，调整为08:20/08:25并新增 deepseek-v3-2 fallback |
+| 2026-04-13 | 全部日报任务时间调整为从06:00起每5分钟错峰；汇总邮件从09:30改为07:30；长周期任务统一改为06:00 |
+| 2026-04-18 | 周报逻辑优化：有日报时直接读取提炼，无日报时实时抓取但只写入周报不生成独立日报文件 |
